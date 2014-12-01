@@ -38,17 +38,57 @@ THE SOFTWARE.
       ${%No builds.}
     </j:when>
     <j:otherwise>
+      <style type="text/css">
+         .git-ignored-changes {
+            opacity: 0.6;
+         }
+      </style>
+      <script>
+        function gitDigestSetExcludedDisplayType(displayType) {
+          var excludedObjects = document.querySelectorAll('.git-ignored-changes'),
+          i = 0,
+          l = excludedObjects.length;
+          for (i; i &lt; l; i++) {
+            excludedObjects[i].style.display = displayType;
+          }
+        }
+        function gitDigestShowExcluded(showExcluded) {
+          if (showExcluded) {
+            gitDigestSetExcludedDisplayType('list-item');
+          } else {
+            gitDigestSetExcludedDisplayType('none');
+          }
+          document.getElementById('git.plugin.GitChangeSetList.digest.hide').style.display =
+            showExcluded ? 'inline' : 'none';
+          document.getElementById('git.plugin.GitChangeSetList.digest.show').style.display =
+            showExcluded ? 'none' : 'inline';
+        }
+      </script>
+      <st:nbsp/>
+      <a id="git.plugin.GitChangeSetList.digest.show" href="javascript:void(0);" onclick="gitDigestShowExcluded(true);">Show excluded</a>
+      <a id="git.plugin.GitChangeSetList.digest.hide" href="javascript:void(0);" onclick="gitDigestShowExcluded(false);">Hide excluded</a>
       <j:set var="hadChanges" value="${false}"/>
+      <j:set var="hadExcludedChanges" value="${false}"/>
       <j:forEach var="b" items="${builds}">
         <j:forEach var="changeSet" items="${b.changeSets}">
           <j:set var="browser" value="${changeSet.browser}"/>
           <j:set var="hadChanges" value="${true}"/>
           <h2><a href="${b.number}/changes">${b.displayName}
-            (<i:formatDate value="${b.timestamp.time}" type="both" dateStyle="medium" timeStyle="medium"/>)</a></h2>
+            (<i:formatDate value="${b.timestamp.time}" type="both" dateStyle="medium" timeStyle="medium"/>)</a>
+          <j:if test="${changeSet.excludedCount != 0}">
+            <st:nbsp/>
+            (${changeSet.excludedCount} commits excluded)
+            <j:set var="hadExcludedChanges" value="${true}"/>
+          </j:if>
+          </h2>
 
           <ol>
             <j:forEach var="c" items="${changeSet.iterator()}">
-              <li>
+              <j:set var="commitClass" value=""/>
+              <j:if test="${changeSet.isExcluded(c)}">
+                <j:set var="commitClass" value="git-ignored-changes"/>
+              </j:if>
+              <li class="${commitClass}">
                 ${c.msgAnnotated}
 
                 &#8212;
@@ -72,6 +112,19 @@ THE SOFTWARE.
       <j:if test="${!hadChanges}">
         ${%No changes in any of the builds.}
       </j:if>
+      <j:choose>
+        <j:when test="${hadExcludedChanges}">
+          <script>
+            gitDigestShowExcluded(false);
+          </script>
+        </j:when>
+        <j:otherwise>
+          <script>
+            document.getElementById("git.plugin.GitChangeSetList.digest.hide").display="none";
+            document.getElementById("git.plugin.GitChangeSetList.digest.show").display="none";
+          </script>
+        </j:otherwise>
+      </j:choose>
     </j:otherwise>
   </j:choose>
 </j:jelly>
