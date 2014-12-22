@@ -255,7 +255,7 @@ public class GitStatus extends AbstractModelObject implements UnprotectedRootAct
                                     final ObjectId id = ObjectId.fromString(sha1);
                                     boolean revIsIncluded = false;
                                     try {
-                                        final Boolean revIsExcluded = git.isRevExcluded(project,
+                                        final Boolean revIsExcluded = git.isRevExcluded((AbstractProject) project,
                                                 id, new LogTaskListener(LOGGER, Level.FINE));
                                         if (revIsExcluded == null) {
                                             LOGGER.info("No previous build detected for project "
