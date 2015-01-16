@@ -48,7 +48,10 @@ public class GitChangeSetList extends ChangeLogSet<GitChangeSet> {
     }
 
     private List<GitChangeSet> getPublicChanges() {
-        return getGitSCM().isHideExcludedInChangeList() ? filteredChangeSets : allChangeSets;
+        final GitSCM git = getGitSCM();
+        final boolean hideExcludedChanges = git == null ? GitSCM.DEFAULT_HIDE_EXCLUDED_COMMITS_IN_CHANGESET
+                : git.isHideExcludedInChangeList();
+        return hideExcludedChanges ? filteredChangeSets : allChangeSets;
     }
 
     @Override

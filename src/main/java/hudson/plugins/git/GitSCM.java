@@ -115,6 +115,7 @@ public class GitSCM extends GitSCMBackwardCompatibility {
     public static final String GIT_COMMIT = "GIT_COMMIT";
     public static final String GIT_PREVIOUS_COMMIT = "GIT_PREVIOUS_COMMIT";
     public static final String GIT_PREVIOUS_SUCCESSFUL_COMMIT = "GIT_PREVIOUS_SUCCESSFUL_COMMIT";
+    public static final boolean DEFAULT_HIDE_EXCLUDED_COMMITS_IN_CHANGESET = false;
 
     /**
      * All the configured extensions attached to this.
@@ -1192,8 +1193,9 @@ public class GitSCM extends GitSCMBackwardCompatibility {
         private String globalConfigName;
         private String globalConfigEmail;
         private boolean createAccountBasedOnEmail;
-        private boolean hideExcludedInChangeList = false;
-//        private GitClientType defaultClientType = GitClientType.GITCLI;
+        private boolean hideExcludedInChangeList = DEFAULT_HIDE_EXCLUDED_COMMITS_IN_CHANGESET;
+
+        //        private GitClientType defaultClientType = GitClientType.GITCLI;
 
         public DescriptorImpl() {
             super(GitSCM.class, GitRepositoryBrowser.class);
