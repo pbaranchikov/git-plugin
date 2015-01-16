@@ -343,6 +343,11 @@ public class GitSCM extends GitSCMBackwardCompatibility {
         return (gitDescriptor != null && gitDescriptor.isCreateAccountBasedOnEmail());
     }
 
+    public boolean isHideExcludedInChangeList() {
+        final DescriptorImpl gitDescriptor = getDescriptor();
+        return (gitDescriptor != null && gitDescriptor.isHideExcludedInChangeList());
+    }
+
     public BuildChooser getBuildChooser() {
         BuildChooser bc;
 
@@ -1187,6 +1192,7 @@ public class GitSCM extends GitSCMBackwardCompatibility {
         private String globalConfigName;
         private String globalConfigEmail;
         private boolean createAccountBasedOnEmail;
+        private boolean hideExcludedInChangeList = false;
 //        private GitClientType defaultClientType = GitClientType.GITCLI;
 
         public DescriptorImpl() {
@@ -1265,6 +1271,19 @@ public class GitSCM extends GitSCMBackwardCompatibility {
 
         public void setCreateAccountBasedOnEmail(boolean createAccountBasedOnEmail) {
             this.createAccountBasedOnEmail = createAccountBasedOnEmail;
+        }
+
+        public void setHideExcludedInChangeList(boolean hideExcludedInChangeList) {
+            this.hideExcludedInChangeList = hideExcludedInChangeList;
+        }
+
+        /**
+         * Returns whether to exclude changes excluded from polling from
+         * external plugins
+         * @return <code>true</code> to exclude excluded changes
+         */
+        public boolean isHideExcludedInChangeList() {
+            return hideExcludedInChangeList;
         }
 
         /**

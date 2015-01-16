@@ -1,56 +1,71 @@
 package hudson.plugins.git;
 
-import hudson.model.AbstractProject;
-import hudson.model.Job;
-import hudson.model.Run;
 import hudson.model.BuildListener;
 import hudson.model.Item;
 import hudson.model.ModelObject;
 import hudson.model.StreamBuildListener;
+import hudson.model.AbstractProject;
+import hudson.model.Run;
 import hudson.plugins.git.extensions.GitSCMExtension;
 import hudson.plugins.git.extensions.impl.ExcludedCommitsBehaviour;
-import hudson.scm.ChangeLogSet;
 import hudson.scm.RepositoryBrowser;
+import hudson.scm.ChangeLogSet;
 import hudson.scm.SCM;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.io.output.NullOutputStream;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.kohsuke.stapler.export.Exported;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 
 /**
  * List of changeset that went into a particular build.
  * @author Nigel Magnay
  */
 public class GitChangeSetList extends ChangeLogSet<GitChangeSet> {
-    private final List<GitChangeSet> changeSets;
-    private volatile Set<GitChangeSet> excluded = null;
+    private final List<GitChangeSet> filteredChangeSets;
+    private final Set<GitChangeSet> excluded;
+    private final List<GitChangeSet> allChangeSets;
 
     /*package*/ GitChangeSetList(Run build, RepositoryBrowser<?> browser, List<GitChangeSet> logs) {
         super(build, browser);
         Collections.reverse(logs);  // put new things first
-        this.changeSets = Collections.unmodifiableList(logs);
+        this.allChangeSets = Collections.unmodifiableList(logs);
         for (GitChangeSet log : logs)
             log.setParent(this);
+        excluded = getExcluded(allChangeSets);
+        final List<GitChangeSet> filteredChanges = Lists.newLinkedList(logs);
+        filteredChanges.removeAll(excluded);
+        filteredChangeSets = Collections.unmodifiableList(filteredChanges);
     }
 
+    private List<GitChangeSet> getPublicChanges() {
+        return getGitSCM().isHideExcludedInChangeList() ? filteredChangeSets : allChangeSets;
+    }
+
+    @Override
     public boolean isEmptySet() {
-        return changeSets.isEmpty();
+        return getPublicChanges().isEmpty();
     }
 
     public Iterator<GitChangeSet> iterator() {
-        return changeSets.iterator();
+        return getPublicChanges().iterator();
+    }
+
+    public boolean isLogsEmpty() {
+        return allChangeSets.isEmpty();
     }
 
     public List<GitChangeSet> getLogs() {
-        return changeSets;
+        return allChangeSets;
     }
 
     @Exported
@@ -59,45 +74,38 @@ public class GitChangeSetList extends ChangeLogSet<GitChangeSet> {
     }
 
     public boolean isExcluded(GitChangeSet change) {
-        return getExcluded().contains(change);
+        return excluded.contains(change);
     }
 
     public int getExcludedCount() {
-        return getExcluded().size();
+        return excluded.size();
     }
 
-    private Set<GitChangeSet> getExcluded() {
-        if (excluded == null) {
-            synchronized (this) {
-                if (excluded == null) {
-                    final GitSCM git = getGitSCM();
-                    if (git != null) {
-                        final BuildListener buildListener = new StreamBuildListener(
-                                new NullOutputStream());
-                        try {
-                            final GitClient gitClient = git.createClient(buildListener, getRun()
-                                    .getEnvironment(buildListener), getRun(), null);
-                            excluded = Sets.newHashSet();
-                            for (GitChangeSet change : changeSets) {
-                                final boolean commitExcluded = isExcludedImpl(git, gitClient,
-                                        buildListener, change);
-                                if (commitExcluded) {
-                                    excluded.add(change);
-                                }
-                            }
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException("Error creating git client", e);
-                        } catch (IOException e) {
-                            throw new RuntimeException("Error creating git client", e);
-                        }
-                    } else {
-                        excluded = Collections.emptySet();
+    private Set<GitChangeSet> getExcluded(Collection<GitChangeSet> allChangeSets) {
+        final GitSCM git = getGitSCM();
+        if (git != null) {
+            final BuildListener buildListener = new StreamBuildListener(new NullOutputStream());
+            try {
+                final GitClient gitClient = git.createClient(buildListener, getRun()
+                        .getEnvironment(buildListener), getRun(), null);
+                final Set<GitChangeSet> excluded = Sets.newHashSet();
+                for (GitChangeSet change : allChangeSets) {
+                    final boolean commitExcluded = isExcludedImpl(git, gitClient, buildListener,
+                            change);
+                    if (commitExcluded) {
+                        excluded.add(change);
                     }
-
                 }
+                return excluded;
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Error creating git client", e);
+            } catch (IOException e) {
+                throw new RuntimeException("Error creating git client", e);
             }
+        } else {
+            return Collections.emptySet();
         }
-        return excluded;
+
     }
 
     private static boolean isExcludedImpl(GitSCM git, GitClient gitClient,
@@ -136,6 +144,9 @@ public class GitChangeSetList extends ChangeLogSet<GitChangeSet> {
      * @return abstract project object, or <code>null</code> if nothing found.
      */
     private AbstractProject<?, ?> getProject(Run<?, ?> job) {
+        if (job == null) {
+            return null;
+        }
         ModelObject nextParent = job.getParent();
         while (nextParent instanceof Item) {
             final Item nextItem = (Item) nextParent;

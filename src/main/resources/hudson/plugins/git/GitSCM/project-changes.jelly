@@ -95,7 +95,7 @@ THE SOFTWARE.
           </j:if>
 
           <ol>
-            <j:forEach var="c" items="${changeSet.iterator()}">
+            <j:forEach var="c" items="${changeSet.logs}">
               <j:set var="commitClass" value=""/>
               <j:if test="${changeSet.isExcluded(c)}">
                 <j:set var="commitClass" value="git-ignored-changes"/>
